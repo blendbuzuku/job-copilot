@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Styles for rendered Markdown (the tailored CV preview) */
+.markdown h1 { @apply text-2xl font-bold mb-2; }
+.markdown h2 { @apply text-lg font-semibold mt-5 mb-2 border-b border-slate-200 pb-1; }
+.markdown h3 { @apply font-semibold mt-3; }
+.markdown p { @apply my-2; }
+.markdown ul { @apply list-disc pl-5 my-2 space-y-1; }
+.markdown a { @apply text-indigo-600 underline; }

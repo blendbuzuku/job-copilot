@@ -206,3 +206,55 @@ says what to do** with it. `PATCH` changes only the fields you send, and that's 
 3. In http://localhost:8000/docs: upload your CV, then call `POST /api/applications/analyze`
    with `{"job_text": "<paste a real job posting>"}`. It takes up to a minute or two,
    because it makes several Claude calls.
+
+---
+
+## Step 5: The React frontend
+
+**Files to open, in this order:** `frontend/src/main.tsx`, `frontend/src/App.tsx`,
+`frontend/src/api.ts`, then the pages in `frontend/src/pages/`
+
+### The pages
+
+| Route | File | What you see |
+|---|---|---|
+| `/` | `BoardPage.tsx` | Your applications in columns by status |
+| `/new` | `NewApplicationPage.tsx` | Paste a job link or text and run the agent |
+| `/applications/:id` | `ApplicationPage.tsx` | Match score, gaps, tailored CV and cover letter |
+| `/profile` | `ProfilePage.tsx` | Upload or paste your CV |
+
+### Key ideas
+
+- **Vite** is the dev server and build tool. `npm run dev` starts it with instant reload.
+  In `vite.config.ts`, the `proxy` forwards every `/api/...` request to FastAPI, so the
+  browser only ever talks to one address (no CORS problems in development).
+- **TypeScript types mirror the backend:** the interfaces in `api.ts` match `schemas.py`.
+  If you misspell a field, the editor underlines it before you even run the app.
+- **React Router** (`App.tsx`) maps URLs to pages. `useParams()` reads `:id` from the URL.
+- **TanStack Query** handles all server data:
+  - `useQuery({ queryKey, queryFn })` loads data and gives you `isPending`, `error` and `data`.
+    It also caches it, so going back to a page is instant.
+  - `useMutation` is for requests that *change* data (save, update, delete).
+  - After a change, `invalidateQueries(['applications'])` tells every page showing that
+    list to refetch it. That's how the board updates after you move a card.
+- **Tailwind CSS:** styling with small utility classes right in the JSX
+  (`rounded-md bg-indigo-600 px-4 py-2`). No separate CSS files to keep in sync.
+- **Download PDF** (`lib/print.ts`) opens the CV in a clean window and calls `print()`.
+  Choose "Save as PDF" in the dialog. It's simple, and you don't need a PDF library.
+
+### A bug worth learning from
+
+The first version of `ProfilePage` gave the editor `key={profile.cv_text}`. After saving,
+the text changed, so the key changed, so React threw away the component *and its
+"Saved!" message*. The fix: create the editor once and update its text in the mutation's
+`onSuccess`. Lesson: changing a `key` resets a component's state completely.
+
+### Try it
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 (the backend must be running on port 8000).

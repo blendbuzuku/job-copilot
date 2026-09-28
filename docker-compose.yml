@@ -29,6 +29,15 @@ services:
       # Cache the embedding model so it is only downloaded once
       - models:/root/.cache
 
+  frontend:
+    build: ./frontend
+    environment:
+      API_URL: http://backend:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
 volumes:
   pgdata:
   models:
