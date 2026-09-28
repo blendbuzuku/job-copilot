@@ -106,3 +106,60 @@ Run the tests: `python -m pytest`
 
 Start the API, open http://localhost:8000/docs, and use **POST /api/profile/upload**
 with your own CV. The response shows how many chunks it made.
+
+---
+
+## Step 3: The AI agent (LangGraph + Claude)
+
+**Files to open:** `backend/app/agent.py` (start with the diagram at the top),
+`backend/app/llm.py`, `backend/tests/test_agent.py`
+
+### The graph
+
+```
+    analyze_job          read the posting, list its requirements
+         |
+    find_evidence        pgvector: closest CV lines for each requirement (RAG)
+         |
+    assess_fit           Claude decides which requirements the CV really shows
+       /    \
+tailor_cv    write_cover_letter      (these two branches run in parallel)
+     |
+check_facts  ---(unsupported claims? rewrite once)---> back to tailor_cv
+     |
+    END
+```
+
+### Key ideas
+
+- **State:** `AgentState` is a dictionary that flows through the graph. Each node is a
+  normal function: it reads the state and returns only the fields it changes. LangGraph
+  merges them in.
+- **Edges:** `add_edge(a, b)` means "after a, run b". Two edges out of `assess_fit` make
+  the CV and the cover letter run **in parallel**. `add_conditional_edges` lets a function
+  (`needs_rewrite`) choose the next node, and that's how the **retry loop** works.
+- **Why a graph and not one big prompt?** Each step is small, testable, and easy to
+  improve on its own. The fact-check loop is something a single prompt can't do: the
+  agent checks its own work and fixes it. This pattern (plan → act → verify → retry) is
+  what "agentic AI" means in job postings.
+- **RAG (retrieval-augmented generation):** `find_evidence` pulls the most relevant CV lines
+  from pgvector and puts them in front of Claude in `assess_fit`. Claude judges using real
+  evidence instead of guessing.
+- **Structured outputs:** `llm.structured(..., schema=JobAnalysis)` makes Claude reply with
+  JSON that matches the Pydantic class, and the SDK validates it for you. No fragile text
+  parsing.
+- **Guardrail:** `HONESTY_RULE` is in every writing prompt, and `check_facts` enforces it.
+  The AI may reword your experience but must never invent it.
+- **Fallbacks:** in `llm.py`, `fallbacks="default"` tells the Claude API to retry on another
+  model automatically if a request is declined.
+
+### Key idea: dependency injection for testing
+
+`build_agent(llm, find_evidence)` receives the LLM and the search function as arguments
+instead of creating them itself. In `test_agent.py` we pass a `FakeLLM` that returns canned
+answers, so the tests run instantly, cost nothing, and need no API key. They check the
+*flow*: the score maths, that the rewrite happens, and that the loop stops after 2 attempts.
+
+### Try it
+
+`python -m pytest -v`
