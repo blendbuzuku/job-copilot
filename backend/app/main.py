@@ -1,6 +1,5 @@
 """FastAPI entry point. Run with: uvicorn app.main:app --reload"""
 from contextlib import asynccontextmanager
-
 from functools import lru_cache
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
@@ -13,6 +12,7 @@ from .agent import build_agent
 from .config import settings
 from .cv_parser import extract_text
 from .db import get_db, init_db
+from .demo_llm import DemoLLM
 from .job_fetcher import JobFetchError, fetch_job_text
 from .llm import ClaudeLLM, LLMError
 from .models import Application
@@ -36,7 +36,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "demo_mode": settings.demo_mode}
 
 
 # ---------- Profile (your base CV) ----------
@@ -66,12 +66,13 @@ async def upload_cv(file: UploadFile, db: Session = Depends(get_db)):
 # ---------- Applications ----------
 
 @lru_cache
-def get_llm() -> ClaudeLLM:
-    return ClaudeLLM()
+def get_llm() -> ClaudeLLM | DemoLLM:
+    # Without an API key, fall back to free demo answers so the app can still be tried
+    return DemoLLM() if settings.demo_mode else ClaudeLLM()
 
 
 @app.post("/api/applications/analyze", response_model=ApplicationOut)
-def analyze_job(body: AnalyzeIn, db: Session = Depends(get_db), llm: ClaudeLLM = Depends(get_llm)):
+def analyze_job(body: AnalyzeIn, db: Session = Depends(get_db), llm: ClaudeLLM | DemoLLM = Depends(get_llm)):
     """Run the AI agent on a job posting and save the result as a new application."""
     profile = cv_store.get_profile(db)
     if not profile.cv_text.strip():

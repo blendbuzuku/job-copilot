@@ -35,3 +35,18 @@ def test_rewrites_stop_after_two_attempts():
     result = run(llm)
     assert result["cv_attempts"] == 2
     assert result["fact_problems"] == ["still bad"]
+
+
+def test_demo_mode_runs_the_whole_agent_without_an_api_key():
+    from app.demo_llm import DemoLLM
+
+    agent = build_agent(DemoLLM(), fake_evidence)
+    result = agent.invoke({
+        "job_text": "Backend Developer\nWe use Python and Docker daily.\nKubernetes is a plus.",
+        "cv_text": "Jane Doe\n- Built Python services, shipped with Docker",
+    })
+    skills = {m["skill"]: m for m in result["matches"]}
+    assert set(skills) == {"Python", "Docker", "Kubernetes"}
+    assert skills["Kubernetes"]["importance"] == "nice"
+    assert skills["Python"]["matched"] and not skills["Kubernetes"]["matched"]
+    assert "Demo mode" in result["tailored_cv"] and "Jane Doe" in result["tailored_cv"]

@@ -54,6 +54,8 @@ const json = (method: string, body: unknown): RequestInit => ({
 })
 
 export const api = {
+  health: () => request<{ status: string; demo_mode: boolean }>('/health'),
+
   getProfile: () => request<Profile>('/profile'),
   saveProfile: (cv_text: string, name = '') => request<Profile>('/profile', json('PUT', { cv_text, name })),
   uploadCv: (file: File) => {

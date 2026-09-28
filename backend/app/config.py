@@ -15,5 +15,11 @@ class Settings(BaseSettings):
     match_threshold: float = 0.75
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    @property
+    def demo_mode(self) -> bool:
+        """No real API key set: use example answers instead of calling Claude."""
+        key = self.anthropic_api_key.strip()
+        return not key or key.endswith("...")
+
 
 settings = Settings()

@@ -289,3 +289,19 @@ Ideas to extend the project (and your CV):
 - **Deploy to AWS:** run the containers on AWS (ECS or App Runner) with a managed Postgres (RDS).
 - **Interview prep:** a new LangGraph node that writes likely interview questions for each role.
 - **Browser extension:** analyze a job directly from the job site.
+
+---
+
+## Step 7: Free demo mode
+
+**Files to open:** `backend/app/demo_llm.py`, `get_llm()` in `backend/app/main.py`,
+`demo_mode` in `backend/app/config.py`, the banner in `frontend/src/App.tsx`
+
+With no API key in `.env`, the backend swaps Claude for `DemoLLM`, which answers with
+simple rules: keyword matching for skills and templates for the documents. The rest of the
+app (pgvector, LangGraph, database, frontend) runs for real.
+
+This works because of the **dependency injection** from step 3: the agent only needs
+*something* with `structured()` and `text()` methods, and it doesn't care whether that's
+Claude, a test fake, or the demo. Swapping one piece without touching the rest is the payoff
+of that design.

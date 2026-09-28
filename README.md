@@ -17,11 +17,12 @@ New to this stack? Read [LEARNING.md](LEARNING.md). It walks through the project
 
 ## Run it
 
-You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and an
-[Anthropic API key](https://console.anthropic.com).
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/). An
+[Anthropic API key](https://console.anthropic.com) is optional: without one the app runs in
+free **demo mode**, with simple example answers instead of real AI.
 
 ```powershell
-copy .env.example .env      # then open .env and paste your API key
+copy .env.example .env      # optional: open .env and paste your API key
 docker compose up --build
 ```
 
