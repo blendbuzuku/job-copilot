@@ -258,3 +258,34 @@ npm run dev
 ```
 
 Open http://localhost:5173 (the backend must be running on port 8000).
+
+---
+
+## Step 6: Continuous integration (GitHub Actions)
+
+**File to open:** `.github/workflows/ci.yml`
+
+Every push to GitHub now runs three jobs on GitHub's servers:
+
+1. **backend**: starts a real Postgres + pgvector (`services:`), installs Python packages,
+   and runs `pytest`.
+2. **frontend**: installs packages with `npm ci`, runs the linter, and builds the app
+   (which also type-checks all the TypeScript).
+3. **docker**: builds both Docker images, so you know `docker compose up` will work.
+
+See the results in the **Actions** tab of the repo on GitHub. A green check next to a commit
+means everything passed. This is what "CI/CD" means in job postings: the *CI* part checks
+every change automatically; *CD* (continuous deployment) would also ship it to a server.
+
+---
+
+## Where to go next
+
+Ideas to extend the project (and your CV):
+
+- **Streaming progress:** send each agent step to the browser as it happens with
+  Server-Sent Events, instead of a fake progress timer.
+- **User accounts:** add login (e.g. JWT auth in FastAPI) so several people can use it.
+- **Deploy to AWS:** run the containers on AWS (ECS or App Runner) with a managed Postgres (RDS).
+- **Interview prep:** a new LangGraph node that writes likely interview questions for each role.
+- **Browser extension:** analyze a job directly from the job site.
