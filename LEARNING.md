@@ -163,3 +163,46 @@ answers, so the tests run instantly, cost nothing, and need no API key. They che
 ### Try it
 
 `python -m pytest -v`
+
+---
+
+## Step 4: API endpoints for applications
+
+**Files to open:** `backend/app/main.py` (the "Applications" section),
+`backend/app/schemas.py`, `backend/app/job_fetcher.py`, `backend/tests/test_api.py`
+
+### The endpoints (a REST API)
+
+| Method | Path | What it does |
+|---|---|---|
+| `POST` | `/api/applications/analyze` | Run the agent on a job link or pasted text, save the result |
+| `GET` | `/api/applications` | List all applications (newest first) |
+| `GET` | `/api/applications/{id}` | One application |
+| `PATCH` | `/api/applications/{id}` | Change some fields, e.g. `{"status": "applied"}` |
+| `DELETE` | `/api/applications/{id}` | Remove it |
+
+REST convention: the **URL names the thing** (`/applications/7`) and the **HTTP method
+says what to do** with it. `PATCH` changes only the fields you send, and that's why
+`ApplicationUpdate` uses `exclude_unset=True`.
+
+### Key ideas
+
+- **Validation for free:** `status: Status` is a `Literal[...]`, so FastAPI rejects
+  `"ghosted"` with a 422 error before your code even runs. `AnalyzeIn` has a
+  `model_validator` that requires either a link or text.
+- **`response_model=ApplicationOut`** converts the database object to JSON and hides
+  anything not listed in the schema.
+- **`job_fetcher.py`** downloads the page with `httpx`, then BeautifulSoup removes scripts,
+  menus and footers so Claude gets just the posting. Some sites (like LinkedIn) need a
+  login, so the app tells you to paste the text instead.
+- **Testing with overrides:** `app.dependency_overrides[get_llm] = ...` swaps the real
+  Claude client for the fake one, only in tests. The API tests use a real Postgres
+  and skip themselves if it isn't running.
+
+### Try it
+
+1. `docker compose up db -d`, then start the API.
+2. Copy `.env.example` to `.env` and add your Anthropic API key.
+3. In http://localhost:8000/docs: upload your CV, then call `POST /api/applications/analyze`
+   with `{"job_text": "<paste a real job posting>"}`. It takes up to a minute or two,
+   because it makes several Claude calls.

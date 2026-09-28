@@ -1,38 +1,7 @@
 """Tests the agent's flow with a fake LLM, so no API key or network is needed."""
-from app.agent import FactCheck, FitAssessment, JobAnalysis, build_agent
+from app.agent import build_agent
 
-
-class FakeLLM:
-    def __init__(self, fact_problems_per_check):
-        self.fact_problems = list(fact_problems_per_check)
-        self.calls = []
-
-    def structured(self, system, prompt, schema):
-        self.calls.append(schema.__name__)
-        if schema is JobAnalysis:
-            return JobAnalysis.model_validate({
-                "company": "Acme",
-                "role": "Backend Engineer",
-                "requirements": [
-                    {"skill": "Python", "importance": "must"},
-                    {"skill": "Kubernetes", "importance": "must"},
-                    {"skill": "GraphQL", "importance": "nice"},
-                ],
-            })
-        if schema is FitAssessment:
-            return FitAssessment.model_validate({"fits": [
-                {"skill": "Python", "matched": True, "note": "Built a FastAPI service"},
-                {"skill": "Kubernetes", "matched": True, "note": "Migrated to Kubernetes"},
-                {"skill": "GraphQL", "matched": False, "note": "Not mentioned"},
-            ]})
-        if schema is FactCheck:
-            return FactCheck(problems=self.fact_problems.pop(0))
-        raise AssertionError(schema)
-
-    def text(self, system, prompt):
-        kind = "cover_letter" if "cover letter" in prompt else "cv"
-        self.calls.append(kind)
-        return f"{kind} text"
+from .fakes import FakeLLM
 
 
 def fake_evidence(queries):
