@@ -58,3 +58,51 @@ uvicorn app.main:app --reload
 
 Open http://localhost:8000/docs to see the interactive API docs. `/api/health` should
 return `{"status": "ok"}`.
+
+---
+
+## Step 2: Upload your CV and search it by meaning
+
+**Files to open:** `backend/app/cv_parser.py`, `backend/app/embeddings.py`,
+`backend/app/cv_store.py`, `backend/app/main.py` (the "Profile" section),
+`backend/tests/test_cv_parser.py`
+
+### The flow
+
+```
+Upload CV (PDF/TXT) ─▶ extract text ─▶ split into chunks ─▶ embed each chunk ─▶ save in Postgres
+                                                                                  │
+"experience with Docker?" ─▶ embed the question ─▶ pgvector finds nearest chunks ◀┘
+```
+
+### What each file does
+
+- **`cv_parser.py`**: `extract_text()` reads a PDF with `pypdf` (or decodes a text file).
+  `chunk_cv()` splits the CV so that each bullet point or short paragraph becomes one chunk.
+  Small chunks make search precise.
+- **`embeddings.py`**: turns text into vectors with **fastembed**, a small model that runs
+  on your own CPU (no API key, no cost). `@lru_cache` makes sure the model is loaded only
+  once. The first run downloads it (about 130 MB).
+- **`cv_store.py`**:
+  - `save_cv()` stores the CV, deletes the old chunks, and saves new chunks with their vectors.
+  - `find_evidence()` is the semantic search. `CvChunk.embedding.cosine_distance(vector)`
+    becomes the SQL operator `<=>`, and `ORDER BY` it returns the closest chunks first.
+    Similarity = 1 − distance, so 1.0 means "same meaning".
+- **`main.py`**: three new endpoints:
+  - `GET /api/profile`: read your CV
+  - `PUT /api/profile`: save CV text you pasted
+  - `POST /api/profile/upload`: upload a file
+- **`schemas.py`**: Pydantic classes that define (and validate) the JSON going in and out.
+
+### Key idea: dependency injection in FastAPI
+
+`db: Session = Depends(get_db)` tells FastAPI: "before calling this function, call
+`get_db()` and pass me what it yields". That way every request gets a fresh database
+session and it's always closed afterwards, with no repeated code.
+
+### Try it
+
+Run the tests: `python -m pytest`
+
+Start the API, open http://localhost:8000/docs, and use **POST /api/profile/upload**
+with your own CV. The response shows how many chunks it made.
